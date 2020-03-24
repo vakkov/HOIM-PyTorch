@@ -1,6 +1,6 @@
 import os
 import sys
-import cPickle as pickle
+import pickle as pickle
 
 import torch
 import torch.distributed as dist
@@ -80,7 +80,7 @@ def init_distributed_mode(args):
 
     torch.cuda.set_device(args.local_rank)
     args.dist_backend = 'nccl'
-    print('| distributed init (rank {}): {}'.format(args.rank, args.dist_url))
+    print(('| distributed init (rank {}): {}'.format(args.rank, args.dist_url)))
     torch.distributed.init_process_group(backend=args.dist_backend, init_method=args.dist_url,
                                          world_size=args.world_size, rank=args.rank)
     torch.distributed.barrier()
@@ -157,7 +157,7 @@ def tensor_gather(tensor_list):
     # we pad the tensor because torch all_gather does not support
     # gathering tensors of different shapes
     lists = [[] for _ in tensor_list]
-    for i in xrange(len(lists)):
+    for i in range(len(lists)):
         tensor_size = list(tensor_list[i].size())
         tensor_size[0] = max_size
         for _ in size_list:

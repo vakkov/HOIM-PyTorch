@@ -5,7 +5,7 @@ from scipy.io import loadmat
 from sklearn.metrics import average_precision_score
 
 from .ps_dataset import PersonSearchDataset
-from ..utils.serialization import pickle, unpickle
+from ..utils.serialization import inpickle, unpickle
 from ..utils.evaluator import _compute_iou
 
 
@@ -41,11 +41,11 @@ class CUHK_SYSU(PersonSearchDataset):
                 np.ones(boxes.shape[0], dtype=np.int32)
 
         def _set_box_pid(boxes, box, pids, pid):
-            for i in xrange(boxes.shape[0]):
+            for i in range(boxes.shape[0]):
                 if np.all(boxes[i] == box):
                     pids[i] = pid
                     return
-            print 'Warning: person {} box {} cannot find in Images'.format(pid, box)
+            print(('Warning: person {} box {} cannot find in Images'.format(pid, box)))
 
         # Load all the train/probe/test persons and number their pids from 0 to N-1
         # Background people have pid == -1
@@ -100,8 +100,8 @@ class CUHK_SYSU(PersonSearchDataset):
                 'gt_pids': pids,
                 'flipped': False})
 
-        pickle(gt_roidb, cache_file)
-        print "wrote gt roidb to {}".format(cache_file)
+        inpickle(gt_roidb, cache_file)
+        print("wrote gt roidb to {}".format(cache_file))
 
         return gt_roidb
 
@@ -186,23 +186,23 @@ class CUHK_SYSU(PersonSearchDataset):
 
                     # tag if detection is correct; could be skipped.
                     ious = np.zeros((num_gt, num_det), dtype=np.float32)
-                    for i in xrange(num_gt):
-                        for j in xrange(num_det):
+                    for i in range(num_gt):
+                        for j in range(num_det):
                             ious[i, j] = _compute_iou(gt_boxes[i], det[j, :4])
                     tfmat = (ious >= 0.5)
                     # for each det, keep only the largest iou of all the gt
-                    for j in xrange(num_det):
+                    for j in range(num_det):
                         largest_ind = np.argmax(ious[:, j])
-                        for i in xrange(num_gt):
+                        for i in range(num_gt):
                             if i != largest_ind:
                                 tfmat[i, j] = False
                     # for each gt, keep only the largest iou of all the det
-                    for i in xrange(num_gt):
+                    for i in range(num_gt):
                         largest_ind = np.argmax(ious[i, :])
-                        for j in xrange(num_det):
+                        for j in range(num_det):
                             if j != largest_ind:
                                 tfmat[i, j] = False
-                    for j in xrange(num_det):
+                    for j in range(num_det):
                         if tfmat[:, j].any():
                             box_true.append(True)
                         else:
@@ -216,7 +216,7 @@ class CUHK_SYSU(PersonSearchDataset):
         accs = []
         topk = [1, 5, 10]
         ret = {'image_root': gallery_set.data_path, 'results': []}
-        for i in xrange(len(probe_set)):
+        for i in range(len(probe_set)):
             y_true, y_score, y_true_box = [], [], []
             imgs, rois = [], []
             count_gt, count_tp = 0, 0
@@ -250,7 +250,7 @@ class CUHK_SYSU(PersonSearchDataset):
                     w, h = gt[2], gt[3]
                     gt[2:] += gt[:2]
                     probe_gt.append({'img': str(gallery_imname),
-                                     'roi': map(float, list(gt))})
+                                     'roi': list(map(float, list(gt)))})
                     iou_thresh = min(0.5, (w * h * 1.0) /
                                      ((w + 10) * (h + 10)))
                     inds = np.argsort(sim)[::-1]
@@ -305,24 +305,24 @@ class CUHK_SYSU(PersonSearchDataset):
             accs.append([min(1, sum(y_true[:k])) for k in topk])
             # 4. Save result for JSON dump
             new_entry = {'probe_img': str(probe_imname),
-                         'probe_roi': map(float, list(probe_roi)),
+                         'probe_roi': list(map(float, list(probe_roi))),
                          'probe_gt': probe_gt,
                          'gallery': []}
             # only save top-10 predictions
-            for k in xrange(10):
+            for k in range(10):
                 new_entry['gallery'].append({
                     'img': str(imgs[inds[k]]),
-                    'roi': map(float, list(rois[inds[k]])),
+                    'roi': list(map(float, list(rois[inds[k]]))),
                     'score': float(y_score[k]),
                     'correct': int(y_true[k]),
                     'det_correct': int(y_true_box[k]),
                 })
             ret['results'].append(new_entry)
 
-        print 'search ranking:'
-        print '  mAP = {:.2%}'.format(np.mean(aps))
+        print('search ranking:')
+        print('  mAP = {:.2%}'.format(np.mean(aps)))
         accs = np.mean(accs, axis=0)
         for i, k in enumerate(topk):
-            print '  top-{:2d} = {:.2%}'.format(k, accs[i])
+            print('  top-{:2d} = {:.2%}'.format(k, accs[i]))
 
         return ret

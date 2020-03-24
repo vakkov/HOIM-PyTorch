@@ -33,7 +33,7 @@ def inference(model, gallery_loader, probe_loader, device):
         for em in embeddings:
             probe_feats.append(em.to(cpu).numpy())
 
-    name_to_boxes = OrderedDict(zip(im_names, all_boxes))
+    name_to_boxes = OrderedDict(list(zip(im_names, all_boxes)))
 
     return name_to_boxes, all_feats, probe_feats
 
@@ -82,23 +82,23 @@ def detection_performance_calc(dataset, gallery_det, det_thresh=0.5, iou_thresh=
             count_gt += num_gt
             continue
         ious = np.zeros((num_gt, num_det), dtype=np.float32)
-        for i in xrange(num_gt):
-            for j in xrange(num_det):
+        for i in range(num_gt):
+            for j in range(num_det):
                 ious[i, j] = _compute_iou(gt_boxes[i], det[j, :4])
         tfmat = (ious >= iou_thresh)
         # for each det, keep only the largest iou of all the gt
-        for j in xrange(num_det):
+        for j in range(num_det):
             largest_ind = np.argmax(ious[:, j])
-            for i in xrange(num_gt):
+            for i in range(num_gt):
                 if i != largest_ind:
                     tfmat[i, j] = False
         # for each gt, keep only the largest iou of all the det
-        for i in xrange(num_gt):
+        for i in range(num_gt):
             largest_ind = np.argmax(ious[i, :])
-            for j in xrange(num_det):
+            for j in range(num_det):
                 if j != largest_ind:
                     tfmat[i, j] = False
-        for j in xrange(num_det):
+        for j in range(num_det):
             y_score.append(det[j, -1])
             if tfmat[:, j].any():
                 y_true.append(True)
@@ -112,9 +112,9 @@ def detection_performance_calc(dataset, gallery_det, det_thresh=0.5, iou_thresh=
     precision, recall, __ = precision_recall_curve(y_true, y_score)
     recall *= det_rate
 
-    print '{} detection:'.format('labeled only' if labeled_only else
-                                 'all')
-    print '  recall = {:.2%}'.format(det_rate)
+    print('{} detection:'.format('labeled only' if labeled_only else
+                                 'all'))
+    print('  recall = {:.2%}'.format(det_rate))
     if not labeled_only:
-        print '  ap = {:.2%}'.format(ap)
+        print('  ap = {:.2%}'.format(ap))
     return precision, recall

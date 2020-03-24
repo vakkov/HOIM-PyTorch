@@ -1,20 +1,20 @@
 import os
 import os.path as osp
-import cPickle
+import pickle
 import json
 import errno
 import numpy as np
 import torch
 
 
-def pickle(data, file_path):
+def inpickle(data, file_path):
     with open(file_path, 'wb') as f:
-        cPickle.dump(data, f, cPickle.HIGHEST_PROTOCOL)
+        pickle.dump(data, f, pickle.HIGHEST_PROTOCOL)
 
 
 def unpickle(file_path):
     with open(file_path, 'rb') as f:
-        data = cPickle.load(f)
+        data = pickle.load(f)
     return data
 
 
@@ -35,7 +35,7 @@ def mkdir_if_missing(dir_path):
 def write_json(obj, fpath):
     mkdir_if_missing(osp.dirname(fpath))
     _obj = obj.copy()
-    for k, v in _obj.items():
+    for k, v in list(_obj.items()):
         if isinstance(v, np.ndarray):
             _obj.pop(k)
     with open(fpath, 'w') as f:

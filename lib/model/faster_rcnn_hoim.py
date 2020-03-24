@@ -246,11 +246,10 @@ class FasterRCNN_HOIM(GeneralizedRCNN):
         assert len(images) == 1, 'Only support batch_size 1 in this mode'
 
         images, targets = self.transform(images, targets)
-        x1, y1, x2, y2 = map(lambda x: int(round(x)),
-                             targets[0]['boxes'][0].tolist())
+        x1, y1, x2, y2 = [int(round(x)) for x in targets[0]['boxes'][0].tolist()]
         input_tensor = images.tensors[:, :, y1:y2 + 1, x1:x2 + 1]
         features = self.backbone(input_tensor)
-        features = features.values()[0]
+        features = list(features.values())[0]
         rcnn_features = self.roi_heads.feat_head(features)
         embeddings = self.roi_heads.embedding_head(rcnn_features)
         return embeddings.split(1, 0)
@@ -457,7 +456,7 @@ class ReIDEmbeddingProj(nn.Module):
                  dim=256):
         super(ReIDEmbeddingProj, self).__init__()
         self.featmap_names = featmap_names
-        self.in_channels = map(int, in_channels)
+        self.in_channels = list(map(int, in_channels))
         self.dim = int(dim)
 
         self.projectors = nn.ModuleDict()
@@ -481,12 +480,12 @@ class ReIDEmbeddingProj(nn.Module):
             tensor of size (BatchSize, dim), L2 normalized embeddings.
         '''
         if len(featmaps) == 1:
-            k, v = featmaps.items()[0]
+            k, v = list(featmaps.items())[0]
             v = self._flatten_fc_input(v)
             return F.normalize(self.projectors[k](v))
         else:
             outputs = []
-            for k, v in featmaps.items():
+            for k, v in list(featmaps.items()):
                 v = self._flatten_fc_input(v)
                 outputs.append(
                     self.projectors[k](v)
@@ -501,7 +500,7 @@ class ReIDEmbeddingProj(nn.Module):
 
     def _split_embedding_dim(self):
         parts = len(self.in_channels)
-        tmp = [self.dim / parts] * parts
+        tmp = [self.dim // parts] * parts
         if sum(tmp) == self.dim:
             return tmp
         else:
