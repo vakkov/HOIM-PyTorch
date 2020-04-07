@@ -30,9 +30,9 @@ class PRW(PersonSearchDataset):
             anno_path = osp.join(self.root, 'annotations', im_name)
             anno = loadmat(anno_path)
             box_key = 'box_new'
-            if box_key not in anno.keys():
+            if box_key not in list(anno.keys()):
                 box_key = 'anno_file'
-            if box_key not in anno.keys():
+            if box_key not in list(anno.keys()):
                 box_key = 'anno_previous'
 
             rois = anno[box_key][:, 1:]
@@ -65,8 +65,8 @@ class PRW(PersonSearchDataset):
         return label_pids
 
     def load_probes(self):
-        query_info = osp.join(self.root, 'query_info_2057.txt')
-        with open(query_info, 'rb') as f:
+        query_info = osp.join(self.root, 'query_info.txt')
+        with open(query_info, 'r') as f:
             raw = f.readlines()
 
         probes = []
@@ -77,7 +77,7 @@ class PRW(PersonSearchDataset):
                 linelist[2]), float(linelist[3]), float(linelist[4])
             roi = np.array([x, y, x + w, y + h]).astype(np.int32)
             roi = np.clip(roi, 0, None)  # several coordinates are negative
-            im_name = linelist[5][:-2] + '.jpg'
+            im_name = linelist[5][:-1] + '.jpg'
             probes.append({'im_name': im_name,
                            'boxes': roi[np.newaxis, :],
                            # Useless. Can be set to any value.
@@ -103,8 +103,8 @@ class PRW(PersonSearchDataset):
         det_thresh (float): filter out gallery detections whose scores below this
         gallery_size (int): gallery size [-1, 50, 100, 500, 1000, 2000, 4000]
                             -1 for using full set
-        ignore_cam_id (bool): Set to True acoording to CUHK-SYSU, 
-                              while it's a common practice to focus on cross-cam match only. 
+        ignore_cam_id (bool): Set to True acoording to CUHK-SYSU,
+                              while it's a common practice to focus on cross-cam match only.
         """
         assert len(gallery_set) == len(gallery_det)
         assert len(gallery_set) == len(gallery_feat)
@@ -127,7 +127,7 @@ class PRW(PersonSearchDataset):
         accs = []
         topk = [1, 5, 10]
         ret = {'image_root': gallery_set.data_path, 'results': []}
-        for i in xrange(len(probe_set)):
+        for i in range(len(probe_set)):
             y_true, y_score = [], []
             imgs, rois = [], []
             count_gt, count_tp = 0, 0
@@ -140,11 +140,8 @@ class PRW(PersonSearchDataset):
             probe_cam = probe_set.record[i]['cam_id']
 
             # Find all occurence of this probe
-            gallery_imgs = filter(
-                lambda x: probe_pid in x['gt_pids'] and
-                x['im_name'] != probe_imname,
-                gt_roidb
-            )
+            gallery_imgs = [x for x in gt_roidb if probe_pid in x['gt_pids'] and
+                x['im_name'] != probe_imname]
             probe_gts = {}
             for item in gallery_imgs:
                 probe_gts[item['im_name']] = \
@@ -152,13 +149,10 @@ class PRW(PersonSearchDataset):
 
             # Construct gallery set for this probe
             if ignore_cam_id:
-                gallery_imgs = filter(
-                    lambda x: x['im_name'] != probe_imname, gt_roidb)
+                gallery_imgs = [x for x in gt_roidb if x['im_name'] != probe_imname]
             else:
-                gallery_imgs = filter(
-                    lambda x: x['im_name'] != probe_imname and
-                    x['cam_id'] != probe_cam,
-                    gt_roidb)
+                gallery_imgs = [x for x in gt_roidb if x['im_name'] != probe_imname and
+                    x['cam_id'] != probe_cam]
 
             # # 1. Go through all gallery samples
             # for item in testset.targets_db:
@@ -211,14 +205,14 @@ class PRW(PersonSearchDataset):
             accs.append([min(1, sum(y_true[:k])) for k in topk])
             # 4. Save result for JSON dump
             new_entry = {'probe_img': str(probe_imname),
-                         'probe_roi': map(float, list(probe_roi.squeeze())),
+                         'probe_roi': list(map(float, list(probe_roi.squeeze()))),
                          'probe_gt': probe_gts,
                          'gallery': []}
             # only save top-10 predictions
             for k in range(10):
                 new_entry['gallery'].append({
                     'img': str(imgs[inds[k]]),
-                    'roi': map(float, list(rois[inds[k]])),
+                    'roi': list(map(float, list(rois[inds[k]]))),
                     'score': float(y_score[k]),
                     'correct': int(y_true[k]),
                 })
@@ -226,9 +220,9 @@ class PRW(PersonSearchDataset):
 
         print('search ranking:')
         mAP = np.mean(aps)
-        print('  mAP = {:.2%}'.format(mAP))
+        print(('  mAP = {:.2%}'.format(mAP)))
         accs = np.mean(accs, axis=0)
         for i, k in enumerate(topk):
-            print('  top-{:2d} = {:.2%}'.format(k, accs[i]))
+            print(('  top-{:2d} = {:.2%}'.format(k, accs[i])))
 
         return ret
